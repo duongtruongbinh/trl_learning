@@ -1,0 +1,6 @@
+*.jsonl
+data/
+data/raw/
+data/processed/
+models/
+logs/
