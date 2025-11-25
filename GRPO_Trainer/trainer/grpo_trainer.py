@@ -64,15 +64,12 @@ def math_accuracy_reward(completions, solution, **kwargs):
     return rewards
 
 
-# ==========================
-# Evaluation: accuracy on a test HF Dataset
-# ==========================
 def evaluate_accuracy(trainer: GRPOTrainer, eval_dataset: Dataset, batch_size: int = 4):
     """
     Run the fine-tuned model on eval_dataset and compute accuracy based on final answer.
     """
     model = trainer.model
-    tokenizer = trainer.tokenizer  # GRPOTrainer constructs this internally
+    tokenizer = trainer.tokenizer 
     model.eval()
 
     total = 0
@@ -93,13 +90,13 @@ def evaluate_accuracy(trainer: GRPOTrainer, eval_dataset: Dataset, batch_size: i
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=512,  # should match/max your prompt length
+            max_length=128,  # match/max your prompt length
         ).to(model.device)
 
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
-                max_new_tokens=256,   # should align with your completion length
+                max_new_tokens=64,    # should match completion length
                 do_sample=False,      # deterministic eval
                 temperature=0.0,
             )
@@ -122,7 +119,7 @@ def evaluate_accuracy(trainer: GRPOTrainer, eval_dataset: Dataset, batch_size: i
 
 def main():
     # ========= 1) Load TRAIN jsonl via GSMK8Dataset =========
-    train_gsm = GSMK8Dataset("data/train.jsonl")
+    train_gsm = GSMK8Dataset("data/raw/train.jsonl")
 
     train_list = []
     for i in tqdm(range(len(train_gsm)), desc="Converting train GSMK8Dataset to HF Dataset"):
@@ -130,20 +127,17 @@ def main():
 
     train_dataset = Dataset.from_list(train_list)
 
-    # (optional) subset for quick debug
-    # train_dataset = train_dataset.select(range(1000))
-
     # ========= 2) GRPO config =========
     training_args = GRPOConfig(
         output_dir="Qwen2-0.5B-GRPO-math",
-        per_device_train_batch_size=4,
-        num_generations=4,
-        max_prompt_length=512,
-        max_completion_length=256,
+        per_device_train_batch_size=2,
+        num_generations=2,
+        max_prompt_length=128,
+        max_completion_length=64,
         logging_steps=10,
         save_steps=500,
         num_train_epochs=1,
-        # you can add learning_rate, bf16/fp16, etc.
+        bf16=True
     )
 
     # ========= 3) Create GRPOTrainer =========
@@ -156,19 +150,6 @@ def main():
 
     # ========= 4) Train =========
     trainer.train()
-
-    # ========= 5) Load TEST jsonl & evaluate accuracy =========
-    test_gsm = GSMK8Dataset("data/test.jsonl")  # <-- dùng test.jsonl của bạn
-
-    test_list = []
-    for i in tqdm(range(len(test_gsm)), desc="Converting test GSMK8Dataset to HF Dataset"):
-        test_list.append(test_gsm[i])
-
-    test_dataset = Dataset.from_list(test_list)
-
-    # Evaluate accuracy on test set
-    evaluate_accuracy(trainer, test_dataset, batch_size=4)
-
 
 if __name__ == "__main__":
     main()

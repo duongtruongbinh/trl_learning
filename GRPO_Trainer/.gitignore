@@ -1,2 +1,5 @@
 models/
 logs/
+checkpoints/
+__pycache__/
+*.pyc
