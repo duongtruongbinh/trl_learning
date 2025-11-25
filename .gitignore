@@ -1,1 +1,25 @@
-results*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.env
+.venv
+.envrc
+
+.cache/
+hf_cache/
+outputs/
+logs/
+checkpoints/
+results/
+
+# Training artifacts
+models/weights/
+*.pt
+*.bin
+*.safetensors
+
+# Local datasets and caches
+data/data_raw/
+data/cache/
