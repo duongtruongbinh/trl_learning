@@ -7,14 +7,13 @@ from datasets import Dataset
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer, logging as hf_logging
 
-# Giảm spam warning từ transformers (đặc biệt là vụ padding_side)
 hf_logging.set_verbosity_error()
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
 from data.gsmk8_dataset import GSMK8Dataset
-from trainer.grpo_trainer import evaluate_accuracy  # chỉnh path nếu file train khác tên
+from trainer.grpo_trainer import evaluate_accuracy
 
 
 class DummyTrainer:
@@ -25,10 +24,6 @@ class DummyTrainer:
 
 
 def find_latest_checkpoint(output_dir: str) -> str:
-    """
-    Tìm checkpoint-* có step lớn nhất trong output_dir.
-    Nếu không có checkpoint nào thì trả về chính output_dir.
-    """
     candidates = []
     for name in os.listdir(output_dir):
         path = os.path.join(output_dir, name)
@@ -80,18 +75,14 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(base_model_id)
 
-    # Quan trọng cho decoder-only: dùng left padding
     tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # Tạo dummy trainer để tái dùng evaluate_accuracy(trainer, ...)
     trainer = DummyTrainer(model=model, tokenizer=tokenizer)
 
-    # ========= 3) Evaluate trên test.jsonl =========
     acc = evaluate_accuracy(trainer, eval_dataset=test_dataset, batch_size=4)
 
-    # ========= 4) Lưu kết quả vào file TXT =========
     log_dir = os.path.join(output_dir, "log")
     os.makedirs(log_dir, exist_ok=True)
     results_path = os.path.join(log_dir, "test_results.txt")

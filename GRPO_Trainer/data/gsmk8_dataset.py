@@ -6,19 +6,15 @@ from torch.utils.data import Dataset
 
 class GSMK8Dataset(Dataset):
     """
-    Dataset cho file jsonl có format:
+    Input Jsonl format:
     {"question": "...", "answer": "...#### 42"}
 
-    Trả về mỗi phần tử:
+    Output:
       {
-        "prompt":   <string: câu hỏi>,
-        "solution": <string: đáp án cuối cùng, ví dụ '42'>,
+        "prompt":   <string: question>,
+        "solution": <string: final answer, e.g. '42'>,
         "answer":   <string: full chain-of-thought + ####>
       }
-
-    Dùng tốt cho GRPO:
-      - "prompt"  -> input cho model
-      - "solution" -> ground truth để reward_func chấm correctness
     """
 
     def __init__(
@@ -50,7 +46,7 @@ class GSMK8Dataset(Dataset):
                 if self.extract_solution:
                     solution = self._extract_final_answer(answer)
                 else:
-                    solution = None  # hoặc obj.get("solution")
+                    solution = None
 
                 sample = {
                     "prompt": question,
