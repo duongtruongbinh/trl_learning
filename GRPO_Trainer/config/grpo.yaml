@@ -15,3 +15,4 @@ model:
 
 dataset:
   train_path: "data/raw/train.jsonl"
+  val_path: "data/raw/test.jsonl"

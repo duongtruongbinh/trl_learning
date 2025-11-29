@@ -1,22 +1,10 @@
 import json
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict
 from torch.utils.data import Dataset
 
 
 class GSMK8Dataset(Dataset):
-    """
-    Input Jsonl format:
-    {"question": "...", "answer": "...#### 42"}
-
-    Output:
-      {
-        "prompt":   <string: question>,
-        "solution": <string: final answer, e.g. '42'>,
-        "answer":   <string: full chain-of-thought + ####>
-      }
-    """
-
     def __init__(
         self,
         path: str,
@@ -59,25 +47,14 @@ class GSMK8Dataset(Dataset):
 
     @staticmethod
     def _extract_final_answer(answer_text: str) -> str:
-        """
-        Extract the part after '\n#### ' as the final answer.
-        Example: '...\\n#### 5' -> '5'
-        - Only matches if '####' is immediately after a newline '\n'
-        - If there are multiple '\n####', use the last one.
-        - If not found, fall back to the last number in the text (if any).
-        """
-        # 1) Find all segments that appear after '\n####'
         matches = re.findall(r"\n####\s*([^\n]+)", answer_text)
         if matches:
-            # If there are multiple matches, take the last one
             return matches[-1].strip()
 
-        # 2) If there is no '\n####', try to take the last number in the whole text
         nums = re.findall(r"-?\d+\.?\d*", answer_text)
         if nums:
             return nums[-1]
 
-        # 3) If nothing is found, return the original string (stripped)
         return answer_text.strip()
 
     def __len__(self) -> int:
@@ -85,3 +62,32 @@ class GSMK8Dataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict:
         return self.samples[idx]
+    
+class GSMK8Collator:
+    def __init__(self, tokenizer, max_length=1024):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        
+        self.tokenizer.padding_side = "left"
+
+    def __call__(self, batch):
+        prompts   = [ex["prompt"] for ex in batch]
+        answers   = [ex.get("answer", "") for ex in batch]
+        solutions = [ex.get("solution", "") for ex in batch]
+
+        enc = self.tokenizer(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+
+        return {
+            "input_ids": enc["input_ids"],
+            "attention_mask": enc["attention_mask"],
+            "prompt": prompts,
+            "answer": answers,
+            "solution": solutions,
+        }
+
